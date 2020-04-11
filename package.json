@@ -1,0 +1,15 @@
+{
+  "name": "brush-course",
+  "version": "1.0.0",
+  "description": "成人教育刷课程",
+  "main": "index.js",
+  "author": "wayne",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "cheerio": "^1.0.0-rc.3",
+    "form-data": "^3.0.0",
+    "qs": "^6.9.3",
+    "xml2js": "^0.4.23"
+  }
+}
