@@ -4,4 +4,4 @@
 
 https://github.com/zwmmm/watch-course/releases/download/1.0/default.zip
 
-![demo.png](https://img04.sogoucdn.com/app/a/100520146/1bd9422a71748cb0bf942646c4aa4bcc)
+![demo.png](https://img03.sogoucdn.com/app/a/100520146/d2774b0f6a49ec5c15ccfcd6a0695642)
