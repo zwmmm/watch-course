@@ -1,6 +1,7 @@
 ## 成人教育网课刷时长脚本
 
-登录网课地址，copy 自己的cookie，修改 index.js 中的 cookie，执行 node index.js 即可
+### 下载地址
 
-<img src="https://s1.ax1x.com/2020/04/11/G7oA4H.png" alt="G7oA4H.png" title="G7oA4H.png" />
-<img src="https://s1.ax1x.com/2020/04/11/G7oSjx.png" alt="G7oSjx.png" title="G7oSjx.png" />
+https://github.com/zwmmm/watch-course/releases/download/1.0/default.zip
+
+![demo.png](https://img04.sogoucdn.com/app/a/100520146/1bd9422a71748cb0bf942646c4aa4bcc)
