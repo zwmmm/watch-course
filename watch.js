@@ -60,6 +60,7 @@ function fetchCourse() {
       Cookie: cookie
     }
   }).then(res => {
+    console.log('登录成功');
     const $ = cheerio.load(res.data);
     const courseList = $('.clist .base_content .base_detail_title a');
     const href = [];
@@ -97,9 +98,11 @@ function fetchChapter(list) {
       });
 
       return chapter;
-    }).then(getCourseInfo).then(() => {
+    })
+    .then(getCourseInfo)
+    .finally(() => {
       if (list.length > 0) {
-        watch()
+        watch();
       }
     })
   }
@@ -133,7 +136,7 @@ function getCourseInfo(chapterList) {
               historyId: data.historyId[0],
               time: 10000,
             });
-            updateCourse({ formData, name: chapter.name }).then(() => {
+            updateCourse({ formData, name: chapter.name }).finally(() => {
               if (chapterList.length > 0) {
                 watch()
               } else {
@@ -141,6 +144,13 @@ function getCourseInfo(chapterList) {
               }
             })
           }))
+        } else {
+          console.log(chapter.name, '观看失败')
+          if (chapterList.length > 0) {
+            watch()
+          } else {
+            resolve();
+          }
         }
       })
     }

@@ -7,6 +7,5 @@ const rl = readline.createInterface({
 });
 
 rl.question('输入你的用户信息:', cookie => {
-  console.log('登录成功');
   watch(cookie);
 })
