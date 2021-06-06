@@ -1,11 +1,17 @@
 const FormData = require('form-data');
 const axios  = require('axios');
 const cheerio = require('cheerio');
-const { parseString } = require('xml2js');
+const { parseString: ps } = require('xml2js');
+const ProgressBar = require('progress')
 
-const host = 'http://pt3.cjnep.net';
+const host = 'http://zust.cjnep.net';
 
-const homeURL = `${host}/lmsv1/course`;
+const homeURL = `${host}/lms/web/course/index`;
+const parseString = data => {
+  return new Promise(resolve => {
+    ps(data, (err, res) => resolve(res))
+  })
+}
 
 
 /**
@@ -17,38 +23,59 @@ function genFormData(obj) {
   formData.append('courseId', obj.courseId);
   formData.append('scoId', obj.scoId);
   formData.append('historyId', obj.historyId);
-  formData.append('addTime', obj.time);
+  formData.append('addTime', obj.addTime);
   formData.append('totalTime', obj.time);
   formData.append('currentTime', obj.time);
   return formData;
 }
 
+function sleep() {
+  return new Promise(resolve => {
+    setTimeout(resolve, 30000)
+  })
+}
+
 
 /**
  * 更新课程
- * @param formData
+ * @param data
+ * @param name
+ * @param time
  */
-function updateCourse(data) {
-  return axios.post(
-    `${host}/lmsv1/course/updstatus`,
-    data.formData,
-    {
-      headers: {
-        ...data.formData.getHeaders(),
-        Cookie: cookie,
-        'Content-Length': data.formData.getLengthSync(),
-      },
-    }
-  ).then(res => {
-    parseString(res.data, (err, obj) => {
-      if (err) return;
-      if (obj.root.status[0] == 1) {
-        console.log(data.name, '观看成功')
-      } else {
-        console.log(data.name, '观看失败')
+async function updateCourse({ data, name, time }) {
+  const bar = new ProgressBar(`学习${name}: [:bar]`, {
+    total: time,
+    width: 50
+  })
+  try {
+    for (let i = 0; i <= time; i += 30) {
+      const formData = genFormData({
+        courseId: data.courseId[0],
+        scoId: data.scoId[0],
+        historyId: data.historyId[0],
+        time: time,
+        addTime: 30
+      });
+      const res = await axios.post(
+        `${host}/lms/web/timing/updstatus`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+            Cookie: cookie,
+            'Content-Length': formData.getLengthSync(),
+          },
+        }
+      )
+      const obj = await parseString(res.data)
+      if (obj.root.status[0] === '1') {
+        bar.tick(30)
       }
-    })
-  }).catch(err => console.log(err.message))
+      await sleep()
+    }
+  } catch (e) {
+    console.log(e)
+  }
 }
 
 /**
@@ -62,7 +89,7 @@ function fetchCourse() {
   }).then(res => {
     console.log('登录成功');
     const $ = cheerio.load(res.data);
-    const courseList = $('.clist .base_content .base_detail_title a');
+    const courseList = $('.courselist .row .mycourse a');
     const href = [];
 
     courseList.each(function () {
@@ -71,97 +98,73 @@ function fetchCourse() {
     });
 
     return href;
-  }).catch(() => {
-    console.log('用户信息错误');
   })
 }
 
 /**
  * 获取章节
  */
-function fetchChapter(list) {
+async function fetchChapter(href) {
+  console.log('获取课程章节...')
+  const res = await axios.get(`${host}${href}`, {
+    headers: {
+      Cookie: cookie
+    }
+  })
+  const $ = cheerio.load(res.data);
+  const courseList = $('.item');
+  const chapter = [];
 
-  function watch() {
-    const href = list.shift();
-    axios.get(`${host}${href}`, {
-      headers: {
-        Cookie: cookie
-      }
-    }).then(res => {
-      const $ = cheerio.load(res.data);
-      const courseList = $('.course_num_div.panel a');
-      const chapter = [];
+  courseList.each(function () {
+    const item = $(this);
+    chapter.push({
+      href: item.attr('onclick').slice(17, -2),
+      name: item.find('.namediv').text(),
+      time: item.find('.date').text().split(':')[0] * 60
+    });
+  });
 
-      courseList.each(function () {
-        const item = $(this);
-        chapter.push({ href: item.attr('href'), name: item.find('.scolor2').text() });
-      });
-
-      return chapter;
-    })
-    .then(getCourseInfo)
-    .finally(() => {
-      if (list.length > 0) {
-        watch();
-      }
-    })
+  for await (const c of chapter) {
+    await getCourseInfo(c);
   }
-
-  watch()
 }
 
 /**
  * 获取课程信息
  */
-function getCourseInfo(chapterList) {
-
-  return new Promise(resolve => {
-
-    function watch() {
-      const chapter = chapterList.shift();
-      axios.get(`${host}${chapter.href}`, {
-        headers: {
-          Cookie: cookie
-        }
-      }).then(res => {
-        const regExp = /\/lmsv1\/course\/startupxml\/courseid\/[0-9]+\/itemid\/[0-9]+\/historyid\/([0-9]+)/;
-        const matchResult = res.data.match(regExp);
-        if (matchResult) {
-          axios.get(`${host}${matchResult[0]}`).then(res => parseString(res.data, function (err, result) {
-            if (err) return;
-            const data = result.root;
-            const formData = genFormData({
-              courseId: data.courseId[0],
-              scoId: data.scoId[0],
-              historyId: data.historyId[0],
-              time: 10000,
-            });
-            updateCourse({ formData, name: chapter.name }).finally(() => {
-              if (chapterList.length > 0) {
-                watch()
-              } else {
-                resolve();
-              }
-            })
-          }))
-        } else {
-          console.log(chapter.name, '观看失败')
-          if (chapterList.length > 0) {
-            watch()
-          } else {
-            resolve();
-          }
-        }
-      })
+async function getCourseInfo(chapter) {
+  const res = await axios.get(`${host}${chapter.href}`, {
+    headers: {
+      Cookie: cookie
     }
-
-    watch()
   })
+  const regExp = /\/lms\/web\/course\/startupxml\?courseid=[0-9]+&itemid=[0-9]+&historyid=([0-9]+)/;
+  const matchResult = res.data.match(regExp);
+  if (matchResult) {
+    const res = await axios.get(`${host}${matchResult[0]}`, {
+      headers: {
+        Cookie: cookie
+      }
+    })
+    const result = await parseString(res.data)
+    const data = result.root;
+    await updateCourse({ data, name: chapter.name, time: chapter.time })
+  } else {
+    console.log(chapter.name, '观看失败')
+  }
 }
 
-function start(cookie) {
-  global.cookie = cookie;
-  fetchCourse().then(fetchChapter)
+async function start(cookie) {
+  try {
+    global.cookie = cookie
+    const list = await fetchCourse()
+    for await (const item of list) {
+      await fetchChapter(item)
+    }
+  } catch (e) {
+    console.log('登录失败')
+    process.exit(-1)
+  }
 }
 
 module.exports = start;
