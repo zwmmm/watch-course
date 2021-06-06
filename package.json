@@ -9,7 +9,7 @@
     "pkg": "pkg ./index.js -t node10-win-x64,node10-macos-x64"
   },
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "cheerio": "^1.0.0-rc.3",
     "form-data": "^3.0.0",
     "progress": "^2.0.3",
