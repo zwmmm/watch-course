@@ -6,6 +6,4 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-rl.question('输入你的用户信息:', cookie => {
-  watch(cookie);
-})
+rl.question('输入你的用户信息:', c => watch(c, rl))

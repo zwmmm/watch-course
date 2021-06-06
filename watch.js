@@ -43,39 +43,45 @@ function sleep() {
  * @param time
  */
 async function updateCourse({ data, name, time }) {
-  const bar = new ProgressBar(`学习${name}: [:bar]`, {
-    total: time,
-    width: 50
-  })
-  try {
-    for (let i = 0; i <= time; i += 30) {
-      const formData = genFormData({
-        courseId: data.courseId[0],
-        scoId: data.scoId[0],
-        historyId: data.historyId[0],
-        time: time,
-        addTime: 30
-      });
-      const res = await axios.post(
-        `${host}/lms/web/timing/updstatus`,
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-            Cookie: cookie,
-            'Content-Length': formData.getLengthSync(),
-          },
+  return new Promise(async resolve => {
+    rl.on('line', () => {
+      resolve()
+    })
+    const bar = new ProgressBar(`学习${name}，输入回车直接学习下一章: [:bar]`, {
+      total: time,
+      width: 50
+    })
+    try {
+      for (let i = 0; i <= time; i += 30) {
+        const formData = genFormData({
+          courseId: data.courseId[0],
+          scoId: data.scoId[0],
+          historyId: data.historyId[0],
+          time: time,
+          addTime: 30
+        });
+        const res = await axios.post(
+          `${host}/lms/web/timing/updstatus`,
+          formData,
+          {
+            headers: {
+              ...formData.getHeaders(),
+              Cookie: cookie,
+              'Content-Length': formData.getLengthSync(),
+            },
+          }
+        )
+        const obj = await parseString(res.data)
+        if (obj.root.status[0] === '1') {
+          bar.tick(30)
         }
-      )
-      const obj = await parseString(res.data)
-      if (obj.root.status[0] === '1') {
-        bar.tick(30)
+        await sleep()
       }
-      await sleep()
+      resolve()
+    } catch (e) {
+      console.log(e)
     }
-  } catch (e) {
-    console.log(e)
-  }
+  })
 }
 
 /**
@@ -154,9 +160,10 @@ async function getCourseInfo(chapter) {
   }
 }
 
-async function start(cookie) {
+async function start(cookie, rl) {
   try {
     global.cookie = cookie
+    global.rl = rl
     const list = await fetchCourse()
     for await (const item of list) {
       await fetchChapter(item)
